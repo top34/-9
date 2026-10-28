@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 400px;
+            text-align: center;
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .input-group {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px 0 0 5px;
+            outline: none;
+        }
+        button {
+            border: none;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .btn-add {
+            background: #007bff;
+            padding: 10px 15px;
+            border-radius: 0 5px 5px 0;
+        }
+        .btn-add:hover { background: #0056b3; }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+        .btn-control {
+            background: #007bff;
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .btn-control.green { background: #28a745; }
+        .btn-control.red { background: #dc3545; }
+        .btn-control:hover { opacity: 0.8; }
+        
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        li {
+            background: #e9ecef;
+            margin-bottom: 10px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-radius: 5px;
+        }
+        .task-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            text-align: left;
+        }
+        .completed .task-text {
+            text-decoration: line-through;
+            color: #6c757d;
+        }
+        .actions button {
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin-left: 5px;
+        }
+        .btn-edit { background: #007bff; }
+        .btn-delete { background: #dc3545; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📌 To-Do List</h2>
+    
+    <div class="input-group">
+        <input type="text" id="taskInput" placeholder="Введіть завдання">
+        <button class="btn-add" onclick="addTask()">➕ Додати</button>
+    </div>
+
+    <div class="controls">
+        <button class="btn-control" onclick="sortTasks('alpha')">abc Сортувати за алфавітом</button>
+        <button class="btn-control" onclick="sortTasks('date')">📅 Сортувати за датою</button>
+        <button class="btn-control green" onclick="filterTasks('completed')">✔️ Показати виконані</button>
+        <button class="btn-control red" onclick="filterTasks('uncompleted')">❌ Показати невиконані</button>
+        <button class="btn-control" onclick="filterTasks('all')">🔄 Показати всі</button>
+    </div>
+
+    <ul id="taskList"></ul>
+</div>
+
+<script>
+    // Отримання даних з LocalStorage
+    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+    let currentFilter = 'all';
+
+    function saveTasks() {
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+
+    function renderTasks() {
+        const list = document.getElementById("taskList");
+        list.innerHTML = "";
+
+        // Фільтрація
+        let filteredTasks = tasks.filter(task => {
+            if (currentFilter === 'completed') return task.completed;
+            if (currentFilter === 'uncompleted') return !task.completed;
+            return true;
+        });
+
+        filteredTasks.forEach(task => {
+            const originalIndex = tasks.indexOf(task); // Зберігаємо оригінальний індекс для дій
+            const li = document.createElement("li");
+            if (task.completed) li.classList.add("completed");
+
+            li.innerHTML = `
+                <div class="task-info">
+                    <input type="checkbox" ${task.completed ? "checked" : ""} onchange="toggleTask(${originalIndex})">
+                    <span class="task-text">${task.text} (${task.date})</span>
+                </div>
+                <div class="actions">
+                    <button class="btn-edit" onclick="editTask(${originalIndex})">✏️</button>
+                    <button class="btn-delete" onclick="deleteTask(${originalIndex})">❌</button>
+                </div>
+            `;
+            list.appendChild(li);
+        });
+    }
+
+    function addTask() {
+        const input = document.getElementById("taskInput");
+        const text = input.value.trim();
+        if (text) {
+            const currentDate = new Date();
+            const dateString = `${currentDate.getDate()}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
+            
+            tasks.push({ 
+                text: text, 
+                date: dateString, 
+                completed: false, 
+                timestamp: currentDate.getTime() 
+            });
+            
+            saveTasks();
+            renderTasks();
+            input.value = "";
+        }
+    }
+
+    function toggleTask(index) {
+        tasks[index].completed = !tasks[index].completed;
+        saveTasks();
+        renderTasks();
+    }
+
+    function deleteTask(index) {
+        tasks.splice(index, 1);
+        saveTasks();
+        renderTasks();
+    }
+
+    function editTask(index) {
+        const newText = prompt("Редагувати завдання:", tasks[index].text);
+        if (newText !== null && newText.trim() !== "") {
+            tasks[index].text = newText.trim();
+            saveTasks();
+            renderTasks();
+        }
+    }
+
+    function sortTasks(type) {
+        if (type === 'alpha') {
+            tasks.sort((a, b) => a.text.localeCompare(b.text));
+        } else if (type === 'date') {
+            tasks.sort((a, b) => a.timestamp - b.timestamp);
+        }
+        saveTasks();
+        renderTasks();
+    }
+
+    function filterTasks(filterType) {
+        currentFilter = filterType;
+        renderTasks();
+    }
+
+    // Початковий рендер
+    renderTasks();
+</script>
+
+</body>
+</html>
